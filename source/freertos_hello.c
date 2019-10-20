@@ -57,6 +57,8 @@
 #define SAMPLES_COUNT 20
 #define LENGTH_STR_BUFFER 20
 #define LUZ_THR 2000
+#define TURNED_ON_TIME 50
+#define TURNED_OFF_TIME 100
 
 /*******************************************************************************
  * Typedefs
@@ -65,7 +67,7 @@ typedef enum{
     TURNED_OFF = 0,
     TURNED_ON_WAITING,
     TURNED_ON,
-    TURNED__OFF_WAITING,
+    TURNED_OFF_WAITING,
 } LightSensorStates;
 
 
@@ -119,7 +121,7 @@ int main(void){
 static void LightSensorTask(TimerHandle_t xTimer){
     (void) xTimer;
     int32_t light_average = 0;
-    static uint8_t samples = 0, index = 0;
+    static uint8_t samples = 0, index = 0, ms_count = 0;
     static uint32_t timestamp = 0;
     static LightSensorStates state = TURNED_OFF;
     uint8_t i;
@@ -143,10 +145,12 @@ static void LightSensorTask(TimerHandle_t xTimer){
         samples++;
     }
     else{
+        /* Calculating average. */
         for (i = 0; i < SAMPLES_COUNT; i++){
             light_average += light_measurement[i];
         }
         light_average /= SAMPLES_COUNT;
+        /* Finite state machine. */
         switch (state){
             case TURNED_OFF:
                 if (light_average < LUZ_THR){
@@ -156,7 +160,44 @@ static void LightSensorTask(TimerHandle_t xTimer){
                     state = TURNED_ON_WAITING;
                 }
                 break;
-
+            case TURNED_ON_WAITING:
+                ms_count++;
+                if (ms_count == TURNED_ON_TIME){
+                    ms_count = 0;
+                    if (light_average > LUZ_THR){
+                        board_setLed(BOARD_LED_ID_ROJO, BOARD_LED_MSG_OFF);
+                        snprintf(str, LENGTH_STR_BUFFER, "[%d] LED:OFF\r\n", timestamp);
+                        (void) uart_rtos_envDatos((uint8_t*) str, strlen(str), 1);
+                        state = TURNED_OFF_WAITING;
+                    }
+                    else{
+                        state = TURNED_ON;
+                    }
+                }
+                break;
+            case TURNED_ON:
+                if (light_average > LUZ_THR){
+                    board_setLed(BOARD_LED_ID_ROJO, BOARD_LED_MSG_OFF);
+                    snprintf(str, LENGTH_STR_BUFFER, "[%d] LED:OFF\r\n", timestamp);
+                    (void) uart_rtos_envDatos((uint8_t*) str, strlen(str), 1);
+                    state = TURNED_OFF_WAITING;
+                }
+                break;
+            case TURNED_OFF_WAITING:
+                ms_count++;
+                if (ms_count == TURNED_OFF_TIME){
+                    ms_count = 0;
+                    if (light_average < LUZ_THR){
+                        board_setLed(BOARD_LED_ID_ROJO, BOARD_LED_MSG_ON);
+                        snprintf(str, LENGTH_STR_BUFFER, "[%d] LED:ON\r\n", timestamp);
+                        (void) uart_rtos_envDatos((uint8_t*) str, strlen(str), 1);
+                        state = TURNED_ON_WAITING;
+                    }
+                    else{
+                        state = TURNED_OFF;
+                    }
+                }
+                break;
             default:
                 break;
         }
