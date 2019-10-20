@@ -47,17 +47,32 @@
 #include "pin_mux.h"
 
 #include "board_dsi.h"
+#include "uart_rtos.h"
 #include "adc.h"
 #include "mma8451.h"
 
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
+#define SAMPLES_COUNT 20
+#define LENGTH_STR_BUFFER 20
+#define LUZ_THR 2000
+
+/*******************************************************************************
+ * Typedefs
+ ******************************************************************************/
+typedef enum{
+    TURNED_OFF = 0,
+    TURNED_ON_WAITING,
+    TURNED_ON,
+    TURNED__OFF_WAITING,
+} LightSensorStates;
+
 
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
-static void blinky_task(void *pvParameters);
+static void LightSensorTask(TimerHandle_t xTimer);
 
 /*******************************************************************************
  * Code
@@ -66,8 +81,10 @@ static void blinky_task(void *pvParameters);
  * @brief Application entry point.
  */
 
-int main(void)
-{
+int main(void){
+
+    TimerHandle_t periodic_task_handle;
+
     /* Init board hardware. */
     BOARD_InitPins();
     BOARD_BootClockRUN();
@@ -77,9 +94,19 @@ int main(void)
 
     key_init();
 
-    adc_init(10);
+    adc_init(0);
 
-    xTaskCreate(blinky_task, "adcAcc", 300, NULL, 1, NULL);
+    uart_rtos_init();
+
+    periodic_task_handle = xTimerCreate("LightSensorTask",
+                                        1 / portTICK_PERIOD_MS,
+			                            pdTRUE,
+		                                NULL,
+			                            LightSensorTask);
+
+    xTimerStart(periodic_task_handle, portMAX_DELAY);
+
+    /* xTaskCreate(blinky_task, "adcAcc", 300, NULL, 1, NULL); */
 
     vTaskStartScheduler();
 
@@ -87,10 +114,60 @@ int main(void)
 }
 
 /*!
+ * @brief Task responsible of the light sensor part.
+ */
+static void LightSensorTask(TimerHandle_t xTimer){
+    (void) xTimer;
+    int32_t light_average = 0;
+    static uint8_t samples = 0, index = 0;
+    static uint32_t timestamp = 0;
+    static LightSensorStates state = TURNED_OFF;
+    uint8_t i;
+    char str[LENGTH_STR_BUFFER];
+    static int32_t light_measurement[SAMPLES_COUNT];
+
+    timestamp++;
+
+    /* Getting value. */
+    ADC_IniciarConv();
+    if (!adc_getValueBlocking(light_measurement + index, 1)){
+        /* Once we note code never gets to this point, we should remove it. */
+        while (1);
+    }
+    if (++index == SAMPLES_COUNT){
+        index = 0;
+    }
+
+    /* Processing (till sample 20, average is not representative). */
+    if (samples < SAMPLES_COUNT - 1){
+        samples++;
+    }
+    else{
+        for (i = 0; i < SAMPLES_COUNT; i++){
+            light_average += light_measurement[i];
+        }
+        light_average /= SAMPLES_COUNT;
+        switch (state){
+            case TURNED_OFF:
+                if (light_average < LUZ_THR){
+                    board_setLed(BOARD_LED_ID_ROJO, BOARD_LED_MSG_ON);
+                    snprintf(str, LENGTH_STR_BUFFER, "[%d] LED:ON\r\n", timestamp);
+                    (void) uart_rtos_envDatos((uint8_t*) str, strlen(str), 1);
+                    state = TURNED_ON_WAITING;
+                }
+                break;
+
+            default:
+                break;
+        }
+    }
+
+}
+
+/*!
  * @brief Task responsible for printing of "Hello world." message.
  */
-static void blinky_task(void *pvParameters)
-{
+static void blinky_task(void *pvParameters){
     int16_t acc;
 
     for (;;)
@@ -111,13 +188,11 @@ static void blinky_task(void *pvParameters)
     }
 }
 
-void vApplicationTickHook(void)
-{
+void vApplicationTickHook(void){
     key_periodicTask1ms();
 }
 
-extern void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
-{
+extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName){
     while(1);
 }
 
