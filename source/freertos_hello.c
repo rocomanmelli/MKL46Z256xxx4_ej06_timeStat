@@ -60,6 +60,8 @@
 #define TURNED_ON_TIME 50
 #define TURNED_OFF_TIME 100
 
+uint32_t timestamp = 0;
+
 /*******************************************************************************
  * Typedefs
  ******************************************************************************/
@@ -122,7 +124,6 @@ static void LightSensorTask(TimerHandle_t xTimer){
     (void) xTimer;
     int32_t light_average = 0;
     static uint8_t samples = 0, index = 0, ms_count = 0;
-    static uint32_t timestamp = 0;
     static LightSensorStates state = TURNED_OFF;
     uint8_t i;
     char str[LENGTH_STR_BUFFER];
