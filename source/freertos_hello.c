@@ -48,6 +48,7 @@
 #include "uart_rtos.h"
 #include "adc.h"
 #include "mma8451.h"
+#include <stdio.h>
 
 /*******************************************************************************
  * Definitions
@@ -94,8 +95,6 @@ int main(void){
 
     board_init();
 
-    key_init();
-
     adc_init(0);
 
     uart_rtos_init();
@@ -107,8 +106,6 @@ int main(void){
 			                            LightSensorTask);
 
     xTimerStart(periodic_task_handle, portMAX_DELAY);
-
-    /* xTaskCreate(blinky_task, "adcAcc", 300, NULL, 1, NULL); */
 
     vTaskStartScheduler();
 
