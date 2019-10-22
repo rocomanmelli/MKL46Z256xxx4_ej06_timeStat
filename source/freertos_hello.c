@@ -33,10 +33,8 @@
  */
 
 /* FreeRTOS kernel includes. */
-#include "key.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "queue.h"
 #include "timers.h"
 
 /* Freescale includes. */
@@ -205,44 +203,3 @@ static void LightSensorTask(TimerHandle_t xTimer){
     }
 
 }
-
-/*!
- * @brief Task responsible for printing of "Hello world." message.
- */
-static void blinky_task(void *pvParameters){
-    int16_t acc;
-
-    for (;;)
-    {
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-
-        acc = mma8451_getAcX();
-
-        if (acc > 50)
-            board_setLed(BOARD_LED_ID_ROJO, BOARD_LED_MSG_ON);
-        else
-            board_setLed(BOARD_LED_ID_ROJO, BOARD_LED_MSG_OFF);
-
-        if (acc < -50)
-            board_setLed(BOARD_LED_ID_VERDE, BOARD_LED_MSG_ON);
-        else
-            board_setLed(BOARD_LED_ID_VERDE, BOARD_LED_MSG_OFF);
-    }
-}
-
-void vApplicationTickHook(void){
-    key_periodicTask1ms();
-}
-
-extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName){
-    while(1);
-}
-
-
-
-
-
-
-
-
-
