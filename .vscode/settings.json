@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "key.h": "c",
+        "queue.h": "c",
+        "pin_mux.h": "c"
+    }
+}
