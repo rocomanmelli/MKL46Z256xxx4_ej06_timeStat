@@ -3,6 +3,13 @@
         "key.h": "c",
         "queue.h": "c",
         "pin_mux.h": "c",
-        "adc.h": "c"
+        "adc.h": "c",
+        "board_dsi.h": "c",
+        "freertos.h": "c",
+        "task.h": "c",
+        "mma8451.h": "c",
+        "clock_config.h": "c",
+        "board.h": "c",
+        "light_sensor.h": "c"
     }
 }

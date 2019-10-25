@@ -32,171 +32,65 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* FreeRTOS kernel includes. */
+
+/*================================[inclusions]================================*/
+/* FreeRTOS kernel headers. */
 #include "FreeRTOS.h"
 #include "task.h"
-#include "timers.h"
 
-/* Freescale includes. */
+/* Freescale headers. */
 #include "fsl_device_registers.h"
 #include "fsl_debug_console.h"
 #include "board.h"
-
 #include "pin_mux.h"
 
+/* Modules headers. */
 #include "board_dsi.h"
 #include "uart_rtos.h"
 #include "adc.h"
-#include "mma8451.h"
-#include <stdio.h>
-
-/*******************************************************************************
- * Definitions
- ******************************************************************************/
-#define SAMPLES_COUNT 20
-#define LENGTH_STR_BUFFER 20
-#define LUZ_THR 2000
-#define TURNED_ON_TIME 50
-#define TURNED_OFF_TIME 100
-
-uint32_t timestamp = 0;
-
-/*******************************************************************************
- * Typedefs
- ******************************************************************************/
-typedef enum{
-    TURNED_OFF = 0,
-    TURNED_ON_WAITING,
-    TURNED_ON,
-    TURNED_OFF_WAITING,
-} LightSensorStates;
+#include "light_sensor.h"
 
 
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
-static void LightSensorTask(TimerHandle_t xTimer);
+/*==========================[macros and definitions]==========================*/
 
-/*******************************************************************************
- * Code
- ******************************************************************************/
-/*!
+
+/*=================================[typedefs]=================================*/
+
+
+/*======================[internal function declarations]======================*/
+
+
+/*=========================[internal data definition]=========================*/
+
+
+/*=========================[external data definition]=========================*/
+
+
+/*======================[internal functions definitions]======================*/
+
+
+/*======================[external functions definitions]======================*/
+
+
+/*===================================[main]===================================*/
+/**
  * @brief Application entry point.
  */
-
-int main(void){
-
-    TimerHandle_t periodic_task_handle;
+void main(void){
 
     /* Init board hardware. */
     BOARD_InitPins();
     BOARD_BootClockRUN();
     BOARD_InitDebugConsole();
 
+    /* Init modules. */
     board_init();
-
     adc_init(0);
-
     uart_rtos_init();
+    LightSensorInit();
 
-    periodic_task_handle = xTimerCreate("LightSensorTask",
-                                        1 / portTICK_PERIOD_MS,
-			                            pdTRUE,
-		                                NULL,
-			                            LightSensorTask);
-
-    xTimerStart(periodic_task_handle, portMAX_DELAY);
-
+    /* Start scheduler. */
     vTaskStartScheduler();
 
     for (;;);
-}
-
-/*!
- * @brief Task responsible of the light sensor part.
- */
-static void LightSensorTask(TimerHandle_t xTimer){
-    (void) xTimer;
-    int32_t light_average = 0;
-    static uint8_t samples = 0, index = 0, ms_count = 0;
-    static LightSensorStates state = TURNED_OFF;
-    uint8_t i;
-    char str[LENGTH_STR_BUFFER];
-    static int32_t light_measurement[SAMPLES_COUNT];
-
-    timestamp++;
-
-    /* Getting value. */
-    ADC_IniciarConv();
-    if (!adc_getValueBlocking(light_measurement + index, 1)){
-        /* Once we note code never gets to this point, we should remove it. */
-        while (1);
-    }
-    if (++index == SAMPLES_COUNT){
-        index = 0;
-    }
-
-    /* Processing (till sample 20, average is not representative). */
-    if (samples < SAMPLES_COUNT - 1){
-        samples++;
-    }
-    else{
-        /* Calculating average. */
-        for (i = 0; i < SAMPLES_COUNT; i++){
-            light_average += light_measurement[i];
-        }
-        light_average /= SAMPLES_COUNT;
-        /* Finite state machine. */
-        switch (state){
-            case TURNED_OFF:
-                if (light_average < LUZ_THR){
-                    board_setLed(BOARD_LED_ID_ROJO, BOARD_LED_MSG_ON);
-                    snprintf(str, LENGTH_STR_BUFFER, "[%d] LED:ON\r\n", timestamp);
-                    (void) uart_rtos_envDatos((uint8_t*) str, strlen(str), 1);
-                    state = TURNED_ON_WAITING;
-                }
-                break;
-            case TURNED_ON_WAITING:
-                ms_count++;
-                if (ms_count == TURNED_ON_TIME){
-                    ms_count = 0;
-                    if (light_average > LUZ_THR){
-                        board_setLed(BOARD_LED_ID_ROJO, BOARD_LED_MSG_OFF);
-                        snprintf(str, LENGTH_STR_BUFFER, "[%d] LED:OFF\r\n", timestamp);
-                        (void) uart_rtos_envDatos((uint8_t*) str, strlen(str), 1);
-                        state = TURNED_OFF_WAITING;
-                    }
-                    else{
-                        state = TURNED_ON;
-                    }
-                }
-                break;
-            case TURNED_ON:
-                if (light_average > LUZ_THR){
-                    board_setLed(BOARD_LED_ID_ROJO, BOARD_LED_MSG_OFF);
-                    snprintf(str, LENGTH_STR_BUFFER, "[%d] LED:OFF\r\n", timestamp);
-                    (void) uart_rtos_envDatos((uint8_t*) str, strlen(str), 1);
-                    state = TURNED_OFF_WAITING;
-                }
-                break;
-            case TURNED_OFF_WAITING:
-                ms_count++;
-                if (ms_count == TURNED_OFF_TIME){
-                    ms_count = 0;
-                    if (light_average < LUZ_THR){
-                        board_setLed(BOARD_LED_ID_ROJO, BOARD_LED_MSG_ON);
-                        snprintf(str, LENGTH_STR_BUFFER, "[%d] LED:ON\r\n", timestamp);
-                        (void) uart_rtos_envDatos((uint8_t*) str, strlen(str), 1);
-                        state = TURNED_ON_WAITING;
-                    }
-                    else{
-                        state = TURNED_OFF;
-                    }
-                }
-                break;
-            default:
-                break;
-        }
-    }
-
 }
