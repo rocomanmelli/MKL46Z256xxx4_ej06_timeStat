@@ -78,18 +78,18 @@
  */
 void main(void){
 
-    /* Init board hardware. */
+    /* Basic hardware initialization. */
     BOARD_InitPins();
     BOARD_BootClockRUN();
     BOARD_InitDebugConsole();
 
-    /* Init modules. */
+    /* Tasks initializations. */
     board_init();
     adc_init(0);
     uart_rtos_init();
     LightSensorInit();
 
-    /* Start scheduler. */
+    /* Scheduler start. */
     vTaskStartScheduler();
 
     for (;;);
