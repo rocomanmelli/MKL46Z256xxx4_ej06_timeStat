@@ -45,3 +45,7 @@
 
 # Unity runners
 *_Runner.c
+
+# Documentation
+doc/html/*
+doc/latex/*

@@ -33,6 +33,18 @@
  */
 
 
+/**
+ * \file main.c
+ * \brief Application entry point.
+ * \details This file contains the main function.
+ * \author Roman Comelli
+ * \date 2019
+ * \copyright 3-Clause BSD License
+ * \addtogroup Main Application entry point
+ * @{
+ */
+
+
 /*================================[inclusions]================================*/
 /* FreeRTOS kernel headers. */
 #include "FreeRTOS.h"
@@ -74,7 +86,11 @@
 
 /*===================================[main]===================================*/
 /**
- * @brief Application entry point.
+ * \brief Application entry point.
+ * \details This function does three things. First of all, it calls functions to
+ * initialize basic hardware like clock. Then, it calls functions that set up
+ * the different tasks that will be running in the system. Finally, the
+ * scheduler starts to execute.
  */
 void main(void){
 
@@ -94,3 +110,6 @@ void main(void){
 
     for (;;);
 }
+
+
+/** @} */
