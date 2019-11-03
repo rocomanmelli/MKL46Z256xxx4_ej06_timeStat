@@ -101,7 +101,7 @@ void main(void){
 
     /* Tasks initializations. */
     board_init();
-    adc_init(0);
+    adc_init(1);
     uart_rtos_init();
     LightSensorInit();
 
