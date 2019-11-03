@@ -61,6 +61,7 @@
 #include "uart_rtos.h"
 #include "adc.h"
 #include "light_sensor.h"
+#include "acc.h"
 
 
 /*==========================[macros and definitions]==========================*/
@@ -104,6 +105,7 @@ void main(void){
     adc_init(1);
     uart_rtos_init();
     LightSensorInit();
+    UserAccInit();
 
     /* Scheduler start. */
     vTaskStartScheduler();
